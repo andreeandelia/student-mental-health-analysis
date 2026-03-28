@@ -5,99 +5,36 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
-
-image = Image.open('students-img.jpg')
+image = Image.open('ps4-console.png')
 
 st.image(image, width="stretch")
 
-st.markdown("""
-# Analiza sanatatii mintale si a burnout-ului in randul studentilor
-
-""", text_alignment="justify")
+st.markdown("# Analiza vanzarilor de jocuri video", text_alignment="justify")
 
 section = st.sidebar.radio("Navigati catre:",
-                     ["Introducere", "Preprocesare", "EDA"])
+                           ["Introducere", "Preprocesare", "EDA"])
 
 if section == "Introducere":
     st.markdown("""
-    Viata academica moderna vine adesea la pachet cu un nivel ridicat de stres, presiune,
-    performanta si provocari legate de echilibrul dintre viata personala si studii. Sanatatea 
-    mintala a studentilor si fenomenul de "burnout" au devenit subiecte critice de discutie
-    in mediul educational. Intelegerea factorilor care declanseaza acest sindrom este primul
-    pas catre preventie si suport adecvat.
-
+    motivatia si obiectivul proiectului
     ***
-    
-    ### Obiectivul proiectului
+    """)
 
-    Scopul principal al acestei aplicatii este de a transforma datele brute intr-o poveste usor de
-    inteles printr-o Analiza Exploratorie a Datelor (EDA) interactiva. Utilizatorii pot nu doar sa 
-    vizualizeze distributia si corelatiile dintre factori, dar si sa interactioneze direct cu setul
-    de date.
-            
-    """, text_alignment="justify")
+    if "uploaded_data" not in st.session_state:
+        st.session_state["uploaded_data"] = None
+    uploaded_file = st.file_uploader("Incarcati un fisier CSV", type="csv")
+    if uploaded_file is not None:
+        st.session_state["uploaded_data"] = pd.read_csv(uploaded_file)
+        st.session_state["processed_df"] = st.session_state["uploaded_data"].copy()
 
+    df = st.session_state["uploaded_data"]
+    if df is None:
+        st.stop()
 
-    if "my_df" not in st.session_state:
-        st.session_state["my_df"] = pd.read_csv("student_mental_health_burnout.csv")
-
-    df = st.session_state["my_df"]
     st.write(df)
 
-    item_count, col_count = df.shape
-    st.markdown(f"""
-    ### Despre setul de date
-        
-    Acest proiect are la baza un set de date de mari dimensiuni ({item_count} de inregistrari
-    si {col_count} de variabile), creat special pentru a analiza si prezice nivelul de burnout
-    al studentilor. Desi este un set de date generat sintetic, el a fost modelat pentru a reflecta
-    cu acuratete realitatea, combinand variabile numerice si categorice din trei arii esentiale:
-    - Factori academici: volum de studiu, note, prezenta;
-    - Factori psihologici: nivelul de stres raportat, anxietate;
-    - Factori de stil de viata: calitatea somnului, activitatea fizica, activitati extracuriculare.
-        
-    #### Prezentarea detaliata a variabilelor
-        
-    Pentru a oferi o imagine clara asupra informatiilor analizate, am grupat cele 20 de variabile in
-    patru categorii logice:
-        
-    ##### A. Date demografice si academice
-        
-    Aceasta sectiune descrie profilul de baza al studentului si performanta sa educationala:
-    - ***student_id***: Identificator unic atribuit fiecarei inregistrari (variabila nominala);
-    - ***age***: Varsta studentului, exprimata in ani (variabila numerica);
-    - ***gender***: Genul studentului (variabila categoriala: Male, Female, Other);
-    - ***course***: Programul de studiu sau specializarea urmata (variabila categoriala);
-    - ***year***: Anul curent de studiu al studentului (variabila categoriala ordinala: 1st, 2nd, 3rd, 4th);
-    - ***attendance_percentage***: Rata de prezenta la cursuri, exprimata procentual (variabila numerica continua);
-    - ***cgpa***: Media cumulata a notelor, reflectand performanta academica generala (variabila numerica continua).
-        
-    ##### B. Stil de viata
-        
-    Variabilele din aceasta categorie cuantifica obiceiurile zilnice care pot influenta starea de bine:
-    - ***daily_study_hours***: Timpul mediu, in ore, dedicat studiului individual zilnic (variabile numerica);
-    - ***daily_sleep_hours***: Numarul mediu de ore de somn pe noapte (variabila numerica);
-    - ***sleep_quality***: Evaluarea subiectiva a calitatii somnului (variabila categorica ordinala: Poor, Average, Good);
-    - ***screen_time_hours***: Timpul zilnic estimat petrecut in fata ecranelor, excluzand studiul (variabila numerica);
-    - ***physical_activity_hours***: Timpul mediu zilnic alocat exercitiilor fizice sau sportului (variabila numerica);
-    - ***internet_quality***: Calitatea conexiunii la internet (variabila categorica: Poor, Average, Good). 
-        
-    ##### C. Evaluari psihologice si factori de stres
-        
-    Aceste variabile reprezinta scoruri auto-raportate sau evaluate care masoara diferite dimensiuni ale sanatatii mintale:
-    - ***stress_level***: Nivelul general de stres resimtit (variabila categorica ordinala: Low, Medium, High);
-    - ***anxiety_score***: Un scor numeric (de la 1 la 10) care indica severitatea simptomelor de anxietate;
-    - ***depression_score***: Un scor numeric care masoara prezenta si intensitatea starilor depresive;
-    - ***academic_pressure_score***: Scorul care cuantifica presiunea resimtita de student in legatura cu termenele limita, examenele si asteptarile academice;
-    - ***financial_stress_score***: Nivelul de ingrijorare cu privire la situatia financiara proprie sau a familiei;
-    - ***social_support_score***: Un indicator al spijinului emotional sau practic perceput din partea familiei, prietenilor sau comunitatii.
-        
-    ##### D. Variabila tinta
-        
-    - ***burnout_level***: Aceasta este variabila dependenta a setului de date, reprezentand nivelul final de epuizare al studentului (variabila categorica ordinala: Low, Medium, High).
-    Toate celelalte caracteristici vor fi analizate din perspectiva impactului pe care il au asupra acestei variabile.
-        
-    """, text_alignment="justify")
+    rows, cols = df.shape
+    st.markdown(f"Setul de date contine {rows} de inregistrari si {cols} coloane", text_alignment="justify")
 
 elif section == "Preprocesare":
     st.markdown("""
@@ -107,7 +44,7 @@ elif section == "Preprocesare":
 
     # Initializare dataset prelucrat
     if "processed_df" not in st.session_state:
-        st.session_state["processed_df"] = st.session_state["my_df"].copy()
+        st.session_state["processed_df"] = st.session_state["uploaded_data"].copy()
 
     df = st.session_state["processed_df"]
 
@@ -117,11 +54,9 @@ elif section == "Preprocesare":
     """)
 
     col_names = df.columns.tolist()
-    default_drop = ["student_id"] if "student_id" in col_names else []
-
     cols_to_drop = st.multiselect("Alegeti coloana/coloanele pe care doriti sa le eliminati:",
                                   options=col_names,
-                                  default=default_drop)
+                                  default=[])
 
     c1, c2 = st.columns(2)
 
@@ -133,7 +68,7 @@ elif section == "Preprocesare":
 
     with c2:
         if st.button("Resetare dataset"):
-            st.session_state["processed_df"] = st.session_state["my_df"].copy()
+            st.session_state["processed_df"] = st.session_state["uploaded_data"].copy()
             st.info("Datasetul a fost resetat la forma initiala")
             st.rerun()
 
@@ -160,7 +95,73 @@ elif section == "Preprocesare":
     if nan_df["Numar NaN"].sum() == 0:
         st.success("Nu exista valori lipsa in dataset")
     else:
-        st.warning("Ecita valori lipsa. Acestea trebuie tratate inainte de modelare")
+        st.warning("Exita valori lipsa. Acestea trebuie tratate inainte de modelare.")
+        st.markdown("***")
+
+        st.markdown("#### Eliminarea randurilor/coloanelor")
+        st.info(
+            "In cazul acestui set de date, variabilele cu cele mai multe valori lipsa sunt chiar variabilele noastre tinta. "
+            "Motiv pentru care recomandam eliminarea ***inregistrarilor*** care nu au variabila ***total_sales***.")
+
+        col_names = df.columns.tolist()
+        col_to_drop = st.selectbox("Alegeti coloana dorita:",
+                                   options=col_names)
+        selected_axis = st.selectbox("Alegeti axa dorita:",
+                                     options=["Rand", "Coloana"])
+        if st.button("Stergeti"):
+            if selected_axis == "Rand":
+                st.session_state["processed_df"] = st.session_state["processed_df"].dropna(subset=[col_to_drop])
+            else:
+                st.session_state["processed_df"] = st.session_state["processed_df"].drop(columns=[col_to_drop], errors="ignore")
+            st.success("Datele au fost sterse cu succes!")
+            st.rerun()
+
+        df = st.session_state["processed_df"]
+        st.markdown("#### Imputarea valorilor lipsa")
+
+        st.markdown("##### Imputare pentru coloanele numerice")
+        col_num = df.select_dtypes(include=["float64", "int64"]).columns
+        col_na = [col for col in col_num if df[col].isnull().sum() > 0]
+
+        selected_col = st.multiselect("Alegeti coloanele numerice:",
+                                      options=col_na)
+        selected_method = st.selectbox("Alegeti metoda de impuare:",
+                                       options=["Valoarea 0", "Medie", "Mediana"])
+        st.info("Pentru a nu distorsiona realitatea, recomandam selectarea optiunii ***Valoarea 0***")
+        if st.button("Aplicati imputarea numerica aleasa"):
+            for col in selected_col:
+                if selected_method == "Valoarea 0":
+                    st.session_state["processed_df"][col] = st.session_state["processed_df"][col].fillna(0)
+                elif selected_method == "Medie":
+                    medie = st.session_state["processed_df"][col].mean()
+                    st.session_state["processed_df"][col] = st.session_state["processed_df"][col].fillna(medie)
+                elif selected_method == "Mediana":
+                    mediana = st.session_state["processed_df"][col].median()
+                    st.session_state["processed_df"][col] = st.session_state["processed_df"][col].fillna(mediana)
+            st.success("Imputarea numerica a fost realizata cu succes!")
+            st.rerun()
+
+        df = st.session_state["processed_df"]
+        st.markdown("##### Imputare pentru coloane categoriale")
+        col_cat = df.select_dtypes(include=["object"]).columns
+        col_na_cat = [col for col in col_cat if df[col].isnull().sum() > 0]
+
+        selected_col_cat = st.multiselect("Alegeti coloanele categoriale:",
+                                      options=col_na_cat)
+        selected_method_cat = st.selectbox("Alegeti metoda de impuare:",
+                                       options=["Necunoscut", "Cea mai frecventa valoare (mod)"])
+        st.info("Pentru a nu distorsiona realitatea, recomandam selectarea optiunii ***Necunoscut***")
+        if st.button("Aplicati imputarea categoriala aleasa"):
+            for col in selected_col_cat:
+                if selected_method_cat == "Necunoscut":
+                    st.session_state["processed_df"][col] = st.session_state["processed_df"][col].fillna("Necunoscut")
+                elif selected_method_cat == "Cea mai frecventa valoare (mod)":
+                    modul = st.session_state["processed_df"][col].mode()[0]
+                    st.session_state["processed_df"][col] = st.session_state["processed_df"][col].fillna(modul)
+            st.success("Imputarea categoriala a fost realizata cu succes!")
+            st.rerun()
+        st.markdown("***")
+
 
     # Analiza outliers
     st.markdown("""

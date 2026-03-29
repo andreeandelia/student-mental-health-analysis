@@ -12,7 +12,7 @@ st.image(image, width="stretch")
 st.markdown("# Analiza vanzarilor de jocuri video", text_alignment="justify")
 
 section = st.sidebar.radio("Navigati catre:",
-                           ["Introducere", "Preprocesare", "EDA"])
+                           ["Introducere", "Preprocesare", "Analiza exploratorie (EDA)"])
 
 if section == "Introducere":
     st.markdown("""
@@ -162,67 +162,71 @@ elif section == "Preprocesare":
             st.rerun()
         st.markdown("***")
 
-
+    df = st.session_state["processed_df"]
     # Analiza outliers
     st.markdown("""
     ### Analiza outliers
     """)
 
+    selected_outliers_method = st.selectbox("Alegeti metoda de analiza",
+                                            options=["IQR (Interquartile Range)", "Boxplot"])
+
+
     numerical_cols = df.select_dtypes(include=[np.number]).columns
     categorical_cols = df.select_dtypes(include=["object"]).columns
 
-    outlier_rows = []
+    if selected_outliers_method == "IQR (Interquartile Range)":
+        st.markdown("#### Detalii Outliers prin metoda IQR")
+        outlier_rows = []
 
-    for col in numerical_cols:
-        q1 = df[col].quantile(0.25)
-        q3 = df[col].quantile(0.75)
-        iqr = q3 - q1
+        for col in numerical_cols:
+            q1 = df[col].quantile(0.25)
+            q3 = df[col].quantile(0.75)
+            iqr = q3 - q1
 
-        lower = q1 - 1.5 * iqr
-        upper = q3 + 1.5 * iqr
+            lower = q1 - 1.5 * iqr
+            upper = q3 + 1.5 * iqr
 
-        mask = (df[col] < lower) | (df[col] > upper)
-        n_outliers = mask.sum()
+            mask = (df[col] < lower) | (df[col] > upper)
+            n_outliers = mask.sum()
 
-        outlier_rows.append({
-            "Variabila": col,
-            "Limita inferioara": round(lower, 2),
-            "Limita superioara": round(upper, 2),
-            "Numar outliers": int(n_outliers),
-            "Procent outliers": round(n_outliers / len(df) * 100, 2)
-        })
+            outlier_rows.append({
+                "Variabila": col,
+                "Limita inferioara": round(lower, 2),
+                "Limita superioara": round(upper, 2),
+                "Numar outliers": int(n_outliers),
+                "Procent outliers": round(n_outliers / len(df) * 100, 2)
+            })
 
-    outlier_df = pd.DataFrame(outlier_rows).sort_values(
-        by="Procent outliers", ascending=False
-    )
+        outlier_df = pd.DataFrame(outlier_rows).sort_values(
+            by="Procent outliers", ascending=False
+        )
 
-    show_only_outliers = st.checkbox("Afiseaza doar variabilele care contin outliers", value=True)
+        show_only_outliers = st.checkbox("Afiseaza doar variabilele care contin outliers", value=True)
 
-    outlier_display = outlier_df[outlier_df["Numar outliers"] > 0] if show_only_outliers else outlier_df
-    st.dataframe(outlier_display, width="stretch")
+        outlier_display = outlier_df[outlier_df["Numar outliers"] > 0] if show_only_outliers else outlier_df
+        st.dataframe(outlier_display, use_container_width=True)
 
-    if (outlier_df["Numar outliers"] == 0).all():
-        st.success("Nu au fost identificati outliers numerici semnificativi prin metoda IQR")
-    else:
-        st.warning("Au fost identificate posibile valori extreme. Acestea trebuie analizate inainte de eliminare")
+        if (outlier_df["Numar outliers"] == 0).all():
+            st.success("Nu au fost identificati outliers numerici semnificativi prin metoda IQR")
+        else:
+            st.warning("Au fost identificate posibile valori extreme. Acestea trebuie analizate inainte de eliminare")
 
-    st.info(
-        "Valorile extreme identificate prin metoda IQR nu sunt eliminate automat, "
-        "deoarece unele pot fi observatii valide si relevante pentru analiza"
-    )
-
+        st.info(
+            "Valorile extreme identificate prin metoda IQR nu sunt eliminate automat, "
+            "deoarece unele pot fi observatii valide si relevante pentru analiza"
+        )
+    elif selected_outliers_method == "Boxplot":
     # Boxplot individual
-    st.markdown("""
-        ### Generarea boxplot-urilor pentru variabilele numerice
-        """)
+        st.markdown("#### Generarea boxplot-urilor pentru variabilele numerice")
 
-    selected_box_col = st.selectbox("Alegeti o variabila numerica:", numerical_cols)
+        selected_box_col = st.selectbox("Alegeti o variabila numerica:", numerical_cols)
 
-    fig, ax = plt.subplots(figsize=(7, 4))
-    ax.boxplot(df[selected_box_col].dropna())
-    ax.set_title(f"Boxplot pentru {selected_box_col}")
-    ax.set_ylabel(selected_box_col)
-    st.pyplot(fig)
+        fig, ax = plt.subplots(figsize=(7, 4))
+        ax.boxplot(df[selected_box_col].dropna(), vert=False)
+        ax.set_title(f"Boxplot pentru distributia {selected_box_col}")
+        ax.set_ylabel(selected_box_col)
+        st.pyplot(fig)
 
     # Descarcare dataset preprocesat
     st.markdown("### Exportare dataset preprocesat")

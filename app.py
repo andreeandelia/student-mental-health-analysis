@@ -1,4 +1,3 @@
-import math
 import matplotlib.pyplot as plt
 import streamlit as st
 import numpy as np
@@ -6,6 +5,7 @@ import pandas as pd
 from PIL import Image
 import plotly.express as px
 import seaborn as sb
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 
 image = Image.open('ps4-console.png')
 
@@ -14,13 +14,18 @@ st.image(image, width="stretch")
 st.markdown("# Analiza vanzarilor de jocuri video", text_alignment="justify")
 
 section = st.sidebar.radio("Navigati catre:",
-                           ["Introducere", "Preprocesare", "Analiza exploratorie (EDA)"])
+                           ["Introducere", "Preprocesare", "Analiza exploratorie (EDA)", "Pregatirea datelor pentru ML"])
 
 if section == "Introducere":
     st.markdown("""
-    motivatia si obiectivul proiectului
+    ## Motivația și obiectivul proiectului
+
+    Acest proiect are ca scop analiza vânzărilor de jocuri video pe baza unui set de date real, pentru a evidenția tipare relevante legate de platforme, genuri, regiuni și performanța comercială a titlurilor lansate de-a lungul timpului.
+
+    Motivația proiectului pornește de la interesul pentru industria gaming-ului și de la dorința de a aplica, într-un context practic, concepte de **preprocesare a datelor**, **analiză exploratorie** și **vizualizare interactivă**.
     ***
-    """)
+    
+    """, text_alignment="justify")
 
     if "uploaded_data" not in st.session_state:
         st.session_state["uploaded_data"] = None
@@ -43,6 +48,10 @@ elif section == "Preprocesare":
     ***
     ## Preprocesarea datelor
     """)
+
+    if "uploaded_data" not in st.session_state or st.session_state["uploaded_data"] is None:
+        st.warning("Incarcati un fisier inainte de a accesa preprocesarea!")
+        st.stop()
 
     # Initializare dataset prelucrat
     if "processed_df" not in st.session_state:
@@ -145,11 +154,11 @@ elif section == "Preprocesare":
             st.rerun()
 
         df = st.session_state["processed_df"]
-        st.markdown("##### Imputare pentru coloane categoriale")
+        st.markdown("##### Imputare pentru coloane categorice")
         col_cat = df.select_dtypes(include=["object"]).columns
         col_na_cat = [col for col in col_cat if df[col].isnull().sum() > 0]
 
-        selected_col_cat = st.multiselect("Alegeti coloanele categoriale:",
+        selected_col_cat = st.multiselect("Alegeti coloanele categorice:",
                                           options=col_na_cat)
         selected_method_cat = st.selectbox("Alegeti metoda de impuare:",
                                            options=["Necunoscut", "Cea mai frecventa valoare (mod)"])
@@ -245,6 +254,10 @@ elif section == "Analiza exploratorie (EDA)":
     st.markdown("""
     ***
     ## Analiza Exploratorie a Datelor""")
+
+    if "processed_df" not in st.session_state or st.session_state["processed_df"] is None:
+        st.warning("Incarcati un fisier inainte de a accesa analiza exploratorie a datelor!")
+        st.stop()
 
     if "eda_df" not in st.session_state:
         st.session_state["eda_df"] = st.session_state["processed_df"].copy()
@@ -355,3 +368,130 @@ elif section == "Analiza exploratorie (EDA)":
         fig4.add_shape(type="line", line=dict(dash="dash", color="gray"), x0=0, y0=0, x1=max_val, y1=max_val)
 
         st.plotly_chart(fig4, use_container_width=True)
+
+    st.markdown("***")
+    st.subheader("5. Matricea de corelatie: Cum se influenteaza variabilele intre ele?")
+    st.write(
+        "Acest grafic ne arata corelatia matematica dintre variabilele numerice. O valoare apropiata de 1 indica o legatura directa puternica.")
+
+    df_numeric = df.select_dtypes(include=[np.number])
+
+    corr_matrix = df_numeric.corr()
+
+    fig5, ax5 = plt.subplots(figsize=(10, 8))
+    sb.heatmap(corr_matrix, annot=True, fmt=".2f", cmap="coolwarm", vmin=-1, vmax=1, linewidths=0.5, ax=ax5)
+    ax5.set_title("Matricea de corelatie a variabilelor numerice")
+
+    st.pyplot(fig5)
+
+elif section == "Pregatirea datelor pentru ML":
+    st.markdown("""
+        ***
+        ## Pregatirea datelor pentru Machine Learning""")
+
+    if "eda_df" not in st.session_state or st.session_state["eda_df"] is None:
+        st.warning("Finalizati preprocesarea si vizitati EDA inainte de a ajunge aici!")
+        st.stop()
+
+    if "ml_df" not in st.session_state:
+        st.session_state["ml_df"] = st.session_state["eda_df"].copy()
+
+    cols_to_drop = ["title", "release_date"]
+
+    st.session_state["ml_df"] = st.session_state["ml_df"].drop(columns=cols_to_drop, errors="ignore")
+
+    df_ml = st.session_state["ml_df"]
+
+    # codificarea datelor
+    st.markdown("### Codificarea variabilelor categorice")
+    st.write("Alegeti coloanele de tip text si metoda matematica prin care doriti sa le transformati in numere.")
+
+    col_cat = df_ml.select_dtypes(include=["object"]).columns.tolist()
+
+    col_num = df_ml.select_dtypes(include=["float64", "int64"]).columns.tolist()
+
+    cols_to_encode = st.multiselect("Alegeti coloanele pe care doriti sa le codificati (ex: genre, console):",
+                                    options=col_cat,
+                                    default=["genre", "console"] if "genre" in col_cat else [])
+
+    encoding_method = st.selectbox("Alegeti metoda de codificare:",
+                                   ["One-Hot Encoding (genereaza coloane separate de 0/1)", "Label Encoding (inlocuieste textul cu cifre: 0, 1, 2, ...)", "Frequency Encoding (inlocuieste cu numarul de aparitii)", "Target Encoding (inlocuieste cu media variabilei tinta)"])
+
+    target_col = None
+    if encoding_method == "Target Encoding (inlocuieste cu media variabilei tinta)":
+        target_col = st.selectbox("Alegeti variabila tinta", options=col_num)
+
+    if st.button("Aplicati codificarea"):
+        if cols_to_encode:
+            if encoding_method == "One-Hot Encoding (genereaza coloane separate de 0/1)":
+                st.session_state["ml_df"] = pd.get_dummies(st.session_state["ml_df"], columns=cols_to_encode,
+                                                           drop_first=True)
+                st.success("One-Hot Encoding aplicat cu succes!")
+                st.rerun()
+            elif encoding_method == "Label Encoding (inlocuieste textul cu cifre: 0, 1, 2, ...)":
+                le = LabelEncoder()
+                for col in cols_to_encode:
+                    st.session_state["ml_df"][col] = le.fit_transform(st.session_state["ml_df"][col].astype(str))
+                st.success("Label Encoding aplicat cu succes!")
+                st.rerun()
+            elif encoding_method == "Frequency Encoding (inlocuieste cu numarul de aparitii)":
+                for col in cols_to_encode:
+                    # Calculam de cate ori apare fiecare categorie
+                    freq_map = st.session_state["ml_df"][col].value_counts().to_dict()
+                    # Cream o coloana noua cu frecventa si o stergem pe cea veche text
+                    st.session_state["ml_df"][f"{col}_freq"] = st.session_state["ml_df"][col].map(freq_map)
+                    st.session_state["ml_df"] = st.session_state["ml_df"].drop(columns=[col])
+                st.success(f"Frequency Encoding aplicat cu succes!")
+                st.rerun()
+            elif encoding_method == "Target Encoding (inlocuieste cu media variabilei tinta)":
+                if target_col:
+                    for col in cols_to_encode:
+                        # Calculam media variabilei tinta pentru fiecare categorie
+                        target_mean_map = st.session_state["ml_df"].groupby(col)[target_col].mean().to_dict()
+                        # Mapam valorile
+                        st.session_state["ml_df"][f"{col}_target_enc"] = st.session_state["ml_df"][col].map(
+                            target_mean_map)
+                        st.session_state["ml_df"] = st.session_state["ml_df"].drop(columns=[col])
+                    st.success(f"Target Encoding (bazat pe {target_col}) aplicat cu succes!")
+                    st.rerun()
+                else:
+                    st.error("Selectați o variabila tinta pentru a putea aplica Target Encoding!")
+        else:
+            st.error("Selectati cel putin o coloana!")
+
+    # scalarea datelor
+    st.markdown("### Scalarea variabilelor numerice")
+    st.write("Vom folosi `StandardScaler` pentru a aduce valorile mari (ex: vanzarile) la aceeasi scara cu cele mici (ex: scorurile)")
+
+    df_ml = st.session_state["ml_df"]
+
+    col_num = df_ml.select_dtypes(include=["float64", "int64"]).columns.tolist()
+
+    default_scale_cols = [col for col in col_num if col != "total_sales"]
+
+    cols_to_scale = st.multiselect("Alegeti coloanele pe care doriti sa le scalati:",
+                                   options=col_num,
+                                   default=default_scale_cols)
+
+    if st.button("Aplicati scalarea standard"):
+        if cols_to_scale:
+            scaler = StandardScaler()
+
+            st.session_state["ml_df"][cols_to_scale] = scaler.fit_transform(st.session_state["ml_df"][cols_to_scale])
+            st.success("Scalarea a fost realizata cu succes!")
+            st.rerun()
+        else:
+            st.error("Selectati cel putin o coloana!")
+
+    st.markdown("***")
+    st.markdown("### Previzualizarea datelor pregatite pentru ML")
+    st.dataframe(st.session_state["ml_df"].head(10), width="stretch")
+
+    st.markdown("### Exportare dataset ML")
+    csv_ml = st.session_state["ml_df"].to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="Descarcati datasetul pregatit pentru ML",
+        data=csv_ml,
+        file_name="dataset_ml_ready.csv",
+        mime="text/csv"
+    )

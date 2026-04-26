@@ -49,16 +49,141 @@ if section == "Introducere":
     if df is None:
         st.stop()
 
-    st.write(df)
+    # conversie release_date in format datat
+    df["release_date"] = pd.to_datetime(df["release_date"], errors="coerce")
 
+    # functii de formatare
+    def format_number(n):
+        return f"{int(n):,}".replace(",", ".")
+
+    def format_sales(n):
+        if pd.isna(n):
+            return "N/A"
+        return f"{n:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def format_date_range(date_series):
+        valid_dates = date_series.dropna()
+
+        if valid_dates.empty:
+            return "N/A"
+
+        min_date = valid_dates.min().strftime("%Y-%m-%d")
+        max_date = valid_dates.max().strftime("%Y-%m-%d")
+
+        return f"{min_date} → {max_date}"
+
+    # kpi
     rows, cols = df.shape
-    st.markdown(f"Setul de date contine {rows} de inregistrari si {cols} coloane", text_alignment="justify")
+
+    date_range = format_date_range(df["release_date"])
+    unique_consoles = df["console"].nunique()
+    unique_genres = df["genre"].nunique()
+    unique_publishers = df["publisher"].nunique()
+    unique_games = df["title"].nunique()
+    total_sales = df["total_sales"].sum(skipna=True)
+
+    # css pentru carduri
+    st.markdown("""
+    <style>
+    .kpi-container {
+        background-color: #0e1117;
+        padding: 18px 22px;
+        border-radius: 8px;
+        margin: 0 auto 25px auto;
+    }
+
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 26px;
+    }
+
+    .kpi-card {
+        padding: 4px 0;
+        border: 1px solid #25282d;
+        border-radius: 8px;
+        background-color: #1a1c24;
+    }
+    
+    .kpi-text {
+        padding: 8px;
+    }
+
+    .kpi-label {
+        color: #d1d5db;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .kpi-value {
+        color: #f9fafb;
+        font-size: 28px;
+        font-weight: 700;
+    }
+
+    @media (max-width: 768px) {
+        .kpi-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div class="kpi-container">
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-text">
+                    <div class="kpi-label">📅 Perioada lansari</div>
+                    <div class="kpi-value">{date_range}</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-text">
+                    <div class="kpi-label">🎮 Console</div>
+                    <div class="kpi-value">{format_number(unique_consoles)}</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-text">
+                    <div class="kpi-label">📄 Total inregistrari</div>
+                    <div class="kpi-value">{format_number(rows)}</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-text">
+                    <div class="kpi-label">🕹️ Jocuri unice</div>
+                    <div class="kpi-value">{format_number(unique_games)}</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-text">
+                    <div class="kpi-label">🏷️ Genuri</div>
+                    <div class="kpi-value">{format_number(unique_genres)}</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-text">
+                    <div class="kpi-label">🏢 Publisheri</div>
+                    <div class="kpi-value">{format_number(unique_publishers)}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.dataframe(df)
 
 elif section == "Preprocesare":
     st.markdown("""
     ***
     ## Preprocesarea datelor
     """)
+
+    if "uploaded_data" not in st.session_state or st.session_state["uploaded_data"] is None:
+        st.warning("Incarcati un fisier inainte de a accesa preprocesarea datelor!")
+        st.stop()
 
     # Initializare dataset prelucrat
     if "processed_df" not in st.session_state:

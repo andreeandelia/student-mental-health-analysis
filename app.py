@@ -19,9 +19,11 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, f1_score
 
 
-image = Image.open('ps4-console.png')
-
-st.image(image, width="stretch")
+try:
+    image = Image.open('ps4-console.png')
+    st.image(image, width="stretch")
+except FileNotFoundError:
+    st.warning("Imaginea de prezentare nu a fost gasita!")
 
 st.markdown("# Analiza vanzarilor de jocuri video", text_alignment="justify")
 
@@ -395,8 +397,12 @@ elif section == "Analiza exploratorie (EDA)":
         st.session_state["eda_df"] = st.session_state["processed_df"].copy()
     df = st.session_state["eda_df"]
 
-    df["release_date"] = pd.to_datetime(df["release_date"], errors="coerce")
-    df["release_year"] = df["release_date"].dt.year
+    if "release_date" in df.columns:
+        df["release_date"] = pd.to_datetime(df["release_date"], errors="coerce")
+        df["release_year"] = df["release_date"].dt.year
+    else:
+        st.error("Coloana release_date lipseste din dataset!")
+        st.stop()
 
     st.subheader("1. Care sunt cele mai bine vandute titluri la nivel global?")
     top_n = st.slider("Selectati numarul de jocuri:", min_value=5, max_value=20, value=10)
@@ -521,12 +527,17 @@ elif section == "Pregatirea datelor pentru ML":
         ***
         ## Pregatirea datelor pentru Machine Learning""")
 
-    if "eda_df" not in st.session_state or st.session_state["eda_df"] is None:
-        st.warning("Finalizati preprocesarea si vizitati EDA inainte de a ajunge aici!")
+    if "processed_df" not in st.session_state or st.session_state["processed_df"] is None:
+        st.warning("Finalizati preprocesarea datelor inainte de a ajunge aici!")
         st.stop()
 
     if "ml_df" not in st.session_state:
-        st.session_state["ml_df"] = st.session_state["eda_df"].copy()
+        st.session_state["ml_df"] = st.session_state["processed_df"].copy()
+
+    if st.button("Resetare dataset ML"):
+        st.session_state["ml_df"] = st.session_state["processed_df"].copy()
+        st.success("Datasetul pentru ML a fost resetat.")
+        st.rerun()
 
     cols_to_drop = ["title", "release_date"]
 
